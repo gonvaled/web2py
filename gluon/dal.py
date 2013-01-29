@@ -237,6 +237,9 @@ DEFAULT = lambda:0
 GLOBAL_LOCKER = threading.RLock()
 THREAD_LOCAL = threading.local()
 
+from   debug_support             import Tracer
+dal_tracer = Tracer('dal.py')
+
 # internal representation of tables with field
 #  <table>.<field>, tables and fields may only be [a-zA-Z0-9_]
 
@@ -1167,6 +1170,7 @@ class BaseAdapter(ConnectionPool):
 
     def insert(self, table, fields):
         query = self._insert(table,fields)
+        dal_tracer.show('query=%s', query)
         try:
             self.execute(query)
         except Exception:

@@ -55,6 +55,8 @@ logger = logging.getLogger("web2py")
 
 DEFAULT = lambda: None
 
+from   debug_support             import Tracer
+tools_tracer = Tracer('tools.py')
 
 def getarg(position, default=None):
     args = current.request.args
@@ -1101,16 +1103,21 @@ class Auth(object):
         self.user_groups = auth and auth.user_groups or {}
         if secure:
             request.requires_https()
+        if auth is None:
+            tools_tracer.show('session.auth is None')
         if auth and auth.last_visit and auth.last_visit + \
                 datetime.timedelta(days=0, seconds=auth.expiration) > request.now:
+            tools_tracer.show('session.auth active, last_visit=%s', auth.last_visit)
             self.user = auth.user
             # this is a trick to speed up sessions
             if (request.now - auth.last_visit).seconds > (auth.expiration / 10):
                 auth.last_visit = request.now
+                tools_tracer.show('changed: last_visit=%s', auth.last_visit)
         else:
             self.user = None
             if session.auth:
                 del session.auth
+                tools_tracer.show('session.auth expired')
         # ## what happens after login?
 
         self.next = current.request.vars._next
@@ -1782,8 +1789,10 @@ class Auth(object):
             last_visit=current.request.now,
             expiration=self.settings.expiration,
             hmac_key=web2py_uuid())
+        tools_tracer.show('session.auth created')
         self.user = user
         self.update_groups()
+        self.log_event(self.messages.login_log, user)
 
     def login_bare(self, username, password):
         """
